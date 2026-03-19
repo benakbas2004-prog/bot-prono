@@ -76,6 +76,8 @@ schedule.every().day.at("13:00").do(pronos_foot)
 schedule.every().day.at("14:00").do(pronos_tennis)
 
 print("✅ Bot IA dynamique lancé...")
+envoyer_message("🚀 Test réussi : ton bot est bien en ligne sur Render ✅")
+
 
 while True:
     schedule.run_pending()
