@@ -5,7 +5,7 @@ import threading
 from flask import Flask
 
 # --- CONFIG BOT ---
-TOKEN = "8723841678:AAFywLWPza3Tb3LeG9QZSmRsLt1JY01j9Es"
+TOKEN = "8723841678:AAFywlWPza3Tb3LeG9QZSmRsLt1JY01j9Es"
 CHAT_ID = 1642810882
 bot = telebot.TeleBot(TOKEN)
 
@@ -60,8 +60,12 @@ def run_schedule():
         time.sleep(1)
 
 # --- THREADS ---
+def start_bot():
+    print("Bot is running!")
+    bot.polling(none_stop=True)
+
 threading.Thread(target=run_schedule).start()
-threading.Thread(target=lambda: bot.polling(none_stop=True)).start()
+threading.Thread(target=start_bot).start()
 
 # --- LANCER FLASK ---
 if __name__ == "__main__":
