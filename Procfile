@@ -1,1 +1,1 @@
-worker: python bot_pronos.py
+web: python bot.py
