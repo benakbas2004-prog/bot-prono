@@ -1,84 +1,68 @@
-import requests
+import telebot
 import schedule
 import time
-from datetime import datetime
+import threading
+from flask import Flask
 
-# ✅ Ton token Telegram et chat_id
-TOKEN = "8723841678:AAFywlWPza3Tb3LeG9QZSmRsLt1JY01j9Es"
-CHAT_ID = "1642810882"
-URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+# --- CONFIG BOT ---
+TOKEN = "8723841678:AAFywLWPza3Tb3LeG9QZSmRsLt1JY01j9Es"
+CHAT_ID = 1642810882
+bot = telebot.TeleBot(TOKEN)
 
-# ✅ Clé API-Football
-API_KEY = "965d24100fde96d7b00b28d4241610ad"
-API_URL = "https://v3.football.api-sports.io/fixtures"
+# --- FLASK SERVER (Keep Alive) ---
+app = Flask(__name__)
 
-HEADERS = {
-    "x-apisports-key": API_KEY
-}
+@app.route('/')
+def home():
+    return "Bot is running!"
 
-# ✅ Fonction pour envoyer un message Telegram
-def envoyer_message(message):
-    try:
-        requests.post(URL_TELEGRAM, data={"chat_id": CHAT_ID, "text": message})
-        print(f"[{datetime.now()}] Message envoyé : {message}")
-    except Exception as e:
-        print(f"Erreur d'envoi : {e}")
+# --- PRONOS ---
+def get_pronos():
+    return """🔥 PRONOS DU JOUR 🔥
+- Real Madrid vs Barça : Real gagne / BTTS Oui / Over 2.5
+- Liverpool vs Man City : BTTS Oui / Over 2.5 / 1X
+- PSG vs Lyon : PSG gagne / Over 2.5 / BTTS Oui
 
-# ✅ Récupérer les matchs du jour (Foot)
-def get_matchs_foot():
-    today = datetime.now().strftime("%Y-%m-%d")
-    params = {"date": today, "league": 61, "season": 2023}  # Ligue 1 exemple
-    response = requests.get(API_URL, headers=HEADERS, params=params)
-    data = response.json()
-    matchs = []
-    if "response" in data:
-        for match in data["response"][:3]:  # 3 matchs max
-            home = match["teams"]["home"]["name"]
-            away = match["teams"]["away"]["name"]
-            matchs.append(f"{home} vs {away}")
-    return matchs if matchs else ["Pas de match trouvé"]
+✅ Combiné SAFE :
+Real gagne + PSG gagne + BTTS Liverpool-City
 
-# ✅ Générer pronostics Foot
-def generer_pronos_foot():
-    matchs = get_matchs_foot()
-    pronos = "⚽ Pronostics Foot du jour :\n"
-    for m in matchs:
-        pronos += f"✅ {m} → Victoire {m.split(' vs ')[0]}\n"
-    pronos += "\n💡 Conseil : Mise prudente en simple, combiné 2 matchs max."
-    return pronos
+💎 Combiné VALUE :
+Over 2.5 Real-Barça + BTTS PSG-Lyon + 1X Liverpool
 
-# ✅ Basket & Tennis (statique pour l'instant)
-def generer_pronos_basket():
-    return """🏀 Pronostics Basket du jour :
-✅ Lakers vs Warriors : +210.5 points
-🔥 Boston gagne (Cote 1.70)
-💡 Conseil : Value Bet sur Boston"""
+⚠ Pariez responsablement.
+"""
 
-def generer_pronos_tennis():
-    return """🎾 Pronostics Tennis du jour :
-✅ Djokovic gagne 2-0 (Cote 1.50)
-🔥 Alcaraz + Over 21.5 jeux (Cote 1.85)
-💡 Conseil : Parier en simple pour sécuriser"""
+# --- ENVOI AUTOMATIQUE ---
+def send_pronos():
+    bot.send_message(CHAT_ID, get_pronos())
 
-# ✅ Fonctions d'envoi
-def pronos_basket():
-    envoyer_message(generer_pronos_basket())
+# --- COMMANDES ---
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "Bienvenue ! Commandes :\n/pronos - Pronostics du jour\n/combine - Combinés SAFE & VALUE")
 
-def pronos_foot():
-    envoyer_message(generer_pronos_foot())
+@bot.message_handler(commands=['pronos'])
+def send_pronos_command(message):
+    bot.send_message(message.chat.id, get_pronos())
 
-def pronos_tennis():
-    envoyer_message(generer_pronos_tennis())
+@bot.message_handler(commands=['combine'])
+def send_combine_command(message):
+    bot.send_message(message.chat.id, "✅ Combiné SAFE :\nReal gagne + PSG gagne + BTTS Liverpool-City\n\n💎 Combiné VALUE :\nOver 2.5 Real-Barça + BTTS PSG-Lyon + 1X Liverpool")
 
-# ✅ Programmation des horaires
-schedule.every().day.at("10:00").do(pronos_basket)
-schedule.every().day.at("13:00").do(pronos_foot)
-schedule.every().day.at("14:00").do(pronos_tennis)
+# --- PLANIFICATION ---
+schedule.every().day.at("10:40").do(send_pronos)
+schedule.every().day.at("12:00").do(send_pronos)
+schedule.every().day.at("14:00").do(send_pronos)
 
-print("✅ Bot IA dynamique lancé...")
+def run_schedule():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
+# --- THREADS ---
+threading.Thread(target=run_schedule).start()
+threading.Thread(target=lambda: bot.polling(none_stop=True)).start()
 
-
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+# --- LANCER FLASK ---
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
